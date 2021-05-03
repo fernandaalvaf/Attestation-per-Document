@@ -1,6 +1,6 @@
 # ATTESTATION PER DOCUMENT
 
-Attestation per document is a python webscraper used for getting information about texts from Trismegistos and Papyri.info.
+Attestation per document is a python (python3) webscraper used for getting information about texts from Trismegistos and Papyri.info.
 It scrapes information from both databases and saves it to a .pdf file. In the resulting document you will find:
 - A list of people attested in the document with Name, TM per id, Attestation id, attestation line, action.
 - Title (from papyri.info)
