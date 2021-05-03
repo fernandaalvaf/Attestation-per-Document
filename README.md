@@ -15,10 +15,10 @@ It scrapes information from both databases and saves it to a .pdf file. In the r
 You should have the .py and the "newathu5_7.ttf" in the same folder before running the code. The newathu5_7 is the font used in the .pdf file which is generated.
 
 Before running the code you have to install the following libraries:
-requests
-bs4
-reportlab
-termcolor
+requests,
+bs4,
+reportlab,
+termcolor.
 
 # How to use
 
