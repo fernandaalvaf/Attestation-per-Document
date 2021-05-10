@@ -50,12 +50,9 @@ while run:
     print("Hi, this program allows you to save the digitized texts and attestation lists of papyri which are available \n"
           "in the databases papyri.info and Trismegistos.")
 
-    #Pub = input("Input the TM id of the text:")
+    Pub = input("Input the TM id of the text:")
 
-    #Pub = "tm1013"
-    Pub = '4833'
-    #Pub = '773'
-
+    
     # The user might type the id with TM or without it (i.e.: TM 1013 or just 1013), this section of the code identifies
     # the input and separates the numerical id to the initials TM.
 
