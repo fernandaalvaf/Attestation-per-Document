@@ -52,7 +52,8 @@ while run:
 
     Pub = input("Input the TM id of the text:")
 
-    
+
+
     # The user might type the id with TM or without it (i.e.: TM 1013 or just 1013), this section of the code identifies
     # the input and separates the numerical id to the initials TM.
 
@@ -74,21 +75,41 @@ while run:
     TM_baseURL = "https://www.trismegistos.org/text/"
     TMURL = TM_baseURL + TMid
 
+
    # Parsing the TM html
 
     TM_HTML = urlopen(TMURL).read()
     TM_r = requests.get(TMURL)
     TM_soup = BeautifulSoup(TM_r.text, features="html.parser")
 
+    pattern_noresults = re.compile(r'no results for this number in TM')
+
     # Finding the DDbDP link
 
-    Ref = TM_soup.find_all('a', attrs={'class': 'division-tooltip'})
-    DDbDP_pattern = re.compile(r'DDbDP')
+    noresultscheck = checktargetdata(pattern_noresults, TM_soup)
+
+
+    if noresultscheck is True:
+        print('Check TM entry. You can access: ' + TMURL + '\n'
+                                                           'Apparently there are no results for this number. \n Exiting...')
+        exit()
+
+    elif noresultscheck is False:
+        Ref = TM_soup.find_all('a', attrs={'class': 'division-tooltip'})
+        DDbDP_pattern = re.compile(r'DDbDP')
+
+    DDbDP_URL = 'Null'
 
     for element in Ref:
         row_DDbDP_match = DDbDP_pattern.search(str(element))
         if row_DDbDP_match is not None:
             DDbDP_URL = element['href']
+            print(DDbDP_URL)
+
+    if DDbDP_URL == 'Null':
+        print('No entry in the Duke Databank for Documentary Papyri for this text. \n Exiting...')
+        exit()
+
 
     # DDbDP HTML
 
