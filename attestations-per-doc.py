@@ -204,7 +204,8 @@ while run:
 
     final_text = text_with_newlines(greek_text)
 
-    
+    pattern_alias = re.compile(r'(\s)(alias)(\s)')
+
     TMrefURL = "https://www.trismegistos.org/ref"
     attestation_URL = TMrefURL + "/ref_list.php?tex_id=" + TMid
     attestation_HTML = urlopen(attestation_URL).read()
@@ -214,8 +215,13 @@ while run:
     attestation_SOUP = BeautifulSoup(attestation_HTML, features="html.parser")
 
     # Gets a list that contains the attested names and the pnrs
-
+    attestations_table = attestation_SOUP.find('table', attrs={'class':'info_table'})
+    attestations_rows = attestations_table.find_all('tr')
     attestations_all = attestation_SOUP.find_all("td", attrs={"class": "cell_2"})[2::4]
+
+
+    pattern_alias = re.compile(r'(\s)(alias)(\s)')
+
     lines_all = attestation_SOUP.find_all("td", attrs={"class": "cell_2"})[1::4]
     attestationsid_all = attestation_SOUP.find_all("td", attrs={"class": "cell_2"})[0::4]
 
@@ -225,24 +231,41 @@ while run:
     lines_str = ''.join(map(str, lines_all))
     attestationsid_str = ''.join(map(str, attestationsid_all))
 
-    pattern_name = re.compile(r'(record=\d+">)(\w+|\.+)')
+    #pattern_name = re.compile(r'(record=\d+">)(\w+|\.+)')
     pattern_id = re.compile(r"(pnr:\s)(\d+)")
     pattern_line = re.compile(r"(>)(\w+\s?\d+\s?-?\s?\d+?)(</)")  # this one is not used in the end
     pattern_attestationid = re.compile(r"(ref_id=)(\d+)")
 
-    # pattern_action =
-    matches_names = pattern_name.finditer(attestations_str)
+
+    # pattern_action
+
+    #    matches_names = pattern_name.finditer(attestations_str)
     matches_ids = pattern_id.finditer(attestations_str)
     matches_lines = pattern_line.finditer(lines_str)
     matches_attestationid = pattern_attestationid.finditer(attestationsid_str)
 
     # NAMES
     names_list = []
-    for match in matches_names:
-        names_list.append(match.group(2))
-    print(names_list)
 
-    # IDS
+    for element in attestations_rows:
+        aliascheck = checktargetdata(pattern_alias, element)
+        if aliascheck is True:
+            temp = element.find_all("td", attrs={"class": "cell_2"})[2::4]
+            for i in temp:
+                temp1 = temp[0].find_all('a', attrs={'href': True})
+                name1 = str(temp1[0].contents).replace("['", '').replace("']", '')
+                alias = ' alias '
+                name2 = str(temp1[1].contents).replace("['", '').replace("']", '')
+                name = str(name1) + alias + str(name2)
+                names_list.append(name)
+        elif aliascheck is False:
+            temp3 = element.find_all("td", attrs={"class": "cell_2"})[2::4]
+            for i in temp3:
+                temp4 = i.find('a', attrs={'href': True})
+                name = str(temp4.contents).replace("['", '').replace("']", '')
+                names_list.append(name)
+    print(names_list)
+                # IDS
     ids_list = []
     for match in matches_ids:
         ids_list.append(match.group(2))
