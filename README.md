@@ -25,7 +25,7 @@ termcolor.
 
 # How to use
 
-After the Setup is done, run the code. It will ask you to input the TMid of the text. You have to type "TM" and the id of the text.
+After the Setup is done, run the code. It will ask you to input the TMid of the text. 
 It will save the .pdf file and ask if you wish to run the code again (type 'y') or exit (type 'n').
 
 # Acknowledgements
