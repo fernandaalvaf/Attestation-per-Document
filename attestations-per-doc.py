@@ -19,136 +19,158 @@ import os
 from urllib.request import urlopen
 from termcolor import colored
 
+# Patterns of the different publication types.
+# This will be used to determine how to build the proper URL later.
+# Like this, I will be able to make my programs functional for any papyrus, not only from the Zenon archive.
 
-run = True # added
+pattern_substring_TM = re.compile(r"\s?[tT][mM]\s?")
+
+#Functions that will be used throughout the code:
+    # Function to get the right table within the DDbDP html:
+
+def get_table(soup, table):
+    table_soup = soup.find('div', attrs={'class': table})
+    return table_soup
+
+
+    # Function to check for the row containing the data:
+
+
+def checktargetdata(pattern, text):
+    match = re.search(pattern, str(text))
+    return bool(match)
+
+
+
+
+run = True
 
 while run:
 
     print("Hi, this program allows you to save the digitized texts and attestation lists of papyri which are available \n"
-          "in the databases papyri.info and Trismegistos. So far only the texts belonging to the P.Cairo Zen. are supported.")
-    Pub = input("Input the TM id of the text:")
+          "in the databases papyri.info and Trismegistos.")
 
+    #Pub = input("Input the TM id of the text:")
 
-    # Patterns of the different publication types.
-    # This will be used to determine how to build the proper URL later.
-    # Like this, I will be able to make my programs functional for any papyrus, not only from the Zenon archive.
+    #Pub = "tm1013"
+    Pub = '4833'
+    #Pub = '773'
 
-    # TM ids
-    pattern_substring_TM = re.compile(r"\s?[tT][mM]\s?")
-    matches_TM = pattern_substring_TM.finditer(Pub)
-    pattern_substring_TM2 = re.compile(r"^[^(59)]\d+")
-
-    # P. Cairo Zen. Publications
-    pattern_substring_Cairo = re.compile(r"[pP]\.?\s?[Cc][Aa][Ii]\.?\s?[Rr]?\.?\s?[Oo]?\.?\s?[Zz][Ee][Nn]\.?")
-    matches_Cairo = pattern_substring_Cairo.finditer(Pub)
-
-    # P.Lond.
-    pattern_substring_Lond = re.compile(r"[Pp]\.?\s?[Ll][Oo][Nn][Dd]\.?\s?")
-    matches_Lond = pattern_substring_Lond.finditer(Pub)
-
-
-    # Function to identify what type of publication was input by the user.
-    def pub_check(txt):
-        if bool(re.search(pattern_substring_TM, txt)) == True:
-            print("TM publication")
-        elif bool(re.search(pattern_substring_Cairo, txt)) == True:
-            print("P.Cairo Zen. publication")
-        elif bool(re.search(pattern_substring_Lond, txt)) == True:
-            print("P.Lond. publication")
-
-
-    pub_check(Pub)
-
-    # Now we need to build the URL
-
-    Papyri_info_baseURL = "https://papyri.info/ddbdp/"
-    TM_baseURL = "https://www.trismegistos.org/text/"
-
-    # TM id:
+    # The user might type the id with TM or without it (i.e.: TM 1013 or just 1013), this section of the code identifies
+    # the input and separates the numerical id to the initials TM.
 
     TMid_pattern = re.compile(r"(\s?[tT][mM]\s?)(\d+)")
-    TMid_match = TMid_pattern.finditer(Pub)
+    pub_input = checktargetdata(TMid_pattern, Pub)
+
+    if pub_input is False:
+        TMid = Pub
+        full_TM = 'TM ' + TMid
+    elif pub_input is True:
+        TMid_match = TMid_pattern.finditer(Pub)
+        for match in TMid_match:
+            TMid = match.group(2)
+            full_TM = Pub
 
 
-    for match in TMid_match:
-        TMid = match.group(2)
+    # Now we need to build the TM URL
 
-
-    print(TMid)
-
+    TM_baseURL = "https://www.trismegistos.org/text/"
     TMURL = TM_baseURL + TMid
+
+   # Parsing the TM html
+
     TM_HTML = urlopen(TMURL).read()
     TM_r = requests.get(TMURL)
     TM_soup = BeautifulSoup(TM_r.text, features="html.parser")
+
+    # Finding the DDbDP link
+
     Ref = TM_soup.find_all('a', attrs={'class': 'division-tooltip'})
+    DDbDP_pattern = re.compile(r'DDbDP')
 
-    link = str(Ref)
+    for element in Ref:
+        row_DDbDP_match = DDbDP_pattern.search(str(element))
+        if row_DDbDP_match is not None:
+            DDbDP_URL = element['href']
 
-    #alterations start here
+    # DDbDP HTML
 
-    pattern_papyriinfo = re.compile(r'(papyri\.info)(.*)(target="_blank">DDbDP)')
-    match_papyriinfo = pattern_papyriinfo.search(link)
-    papyriinfo_link = str(match_papyriinfo[2]).replace('"','')
+    DDbDP_HTML = urlopen(DDbDP_URL).read()
+    DDbDP_r = requests.get(DDbDP_URL)
+    DDbDP_soup = BeautifulSoup(DDbDP_r.text, features="html.parser")
 
-    print(papyriinfo_link)
+    # Getting the metadata of the document. Primarily from oxford-ipap.apis, but if that's not available, from HGV.
+    # Table names:
+    HGV = 'hgv data'
+    TM = 'tm data'
+    Oxford = 'apis data'
 
-    pattern_link = re.compile(r"(P\.Cair\.zen;)(\d)(;)(\d+)")
-    match_link = pattern_link.finditer(link)
+    # HGV table content:
 
-    publs = TM_soup.find_all('div', attrs={'id': 'text-publs'})[0].get_text()
+    HGV_table = get_table(DDbDP_soup, HGV)
+    HGV_rows = HGV_table.find_all('tr')
 
-    pcz_pattern = re.compile(r'(zen;)(\d)(;)(\d+)')
-    pcz_match = pcz_pattern.match(papyriinfo_link)
-    pcz = pcz_pattern.findall(papyriinfo_link)
+    # Getting the publications from the HGV table:
+    pattern_publications = re.compile(r'[P|p]ublications')
 
-    pcz_pub_pattern = re.compile(r'(Caire)(\s)(\d)(\s)(\d+)')
-    pcz_pub = pcz_pub_pattern.findall(publs)
+    for element in HGV_rows:
+        pubcheck = checktargetdata(pattern_publications, element)
+        #print(pubcheck)
+        if pubcheck is True:
+            publication_cell = element.find('td')
+            #print(publication_cell)
+            publication_moreinfo = publication_cell.find('div')
+            publication1 = publication_cell.contents[0].replace(str(publication_moreinfo), '')
+            #print(publication1)
+            publication2 = publication1.replace("\n", ' ')
+            publication = re.sub(' +', ' ',publication2)
 
 
-    if pcz_match is not None:
-        VolumeIndex = pcz[0][1]
-        Document_id = pcz[0][3]
+    # Getting the title from the HGV table:
+    pattern_title = re.compile(r'>[T|t]itle')
+
+    for element in HGV_rows:
+        titlecheck = checktargetdata(pattern_title, element)
+        if titlecheck is True:
+            title_cell = element.find('td')
+            title = title_cell.contents[0].replace("['", '').replace("']", '')
+
+    # TM table content:
+
+    TM_table = get_table(DDbDP_soup, TM)
+    TM_rows = TM_table.find_all('tr')
+
+    # Getting the date from the TM table:
+    pattern_date = re.compile(r'[D|d]ate')
+
+    for element in TM_rows:
+        datecheck = checktargetdata(pattern_date, element)
+        if datecheck is True:
+            date_cell = element.find('td')
+            date = date_cell.contents[0].replace("['", '').replace("']", '')
+
+    # Getting Oxford-ipap table content and summary:
+    pattern_summary = re.compile(r'[S|s]ummary')
+    pattern_multiplespace = re.compile(r'%+')
+
+    Oxford_table = get_table(DDbDP_soup, Oxford)
+    if Oxford_table is not None:
+        Oxford_rows = Oxford_table.find_all('tr')
+        for element in Oxford_rows:
+            summarycheck = checktargetdata(pattern_summary, element)
+            if summarycheck is True:
+                summary_cell = element.find('td')
+                summary1 = summary_cell.contents[0].replace("\n", ' ')
+                summary = re.sub(' +',' ', summary1)
     else:
-        VolumeIndex = pcz_pub[0][2]
-        Document_id = pcz_pub[0][4]
+        Oxford_rows = None
+        summary = 'Not available'
 
+    print('TMid: ', TMid,'\n','title:', title,'\n','pub:', publication,'\n', 'date:',date,'\n','summary:', summary)
 
-
-    PapyriInfoUrl = "http://papyri.info" + papyriinfo_link
-    print(PapyriInfoUrl)
-
-
-
-    # #and the ids that are taken from it...
-    PapyriInfoIds = range(59001, 59854)
-
-
-    # cheatsheet to the volumes and numbers of the corpus
-    print("Vol 1 (p.cair.zen;1;59xxx series): from 59001 to 59139.\n"
-          "Vol 2 (p.cair.zen;2;59xxx series): from 59140 to 59297.\n"
-          "Vol 3 (p.cair.zen;3;59xxx series): from 59298 to 59531.\n"
-          "Vol 4 (p.cair.zen;4;59xxx series): from 59532 to 59800.\n"
-          "Vol 5 (p.cair.zen;5;59xxx series): from 59801 to 59853.")
-
-    completeUrl = PapyriInfoUrl #+ VolumeIndex + ';' + Document_id  # For each element we create the URL to query
-    print(completeUrl)
-
-    html = urlopen(completeUrl).read()
-    soup = BeautifulSoup(html, features="html.parser")
-
-
-
-    # Getting the metadata of the document
-    title = soup.find_all('td', attrs={'class': 'mdtitle'})[0].text
-    summary = soup.find_all('table', attrs={'class': 'metadata'})[2].find_all('td')[1].text
-    date = soup.find_all('table', attrs={'class': 'metadata'})[1].find_all('td')[2].text
-    tm_id = soup.find('div', attrs={'class': 'tm data'}).find('h2').text.replace("[source]","")
-    pcairz_id = soup.find_all('table', attrs={'class': 'metadata'})[2].find_all('td')[2].text
-
-    print(tm_id)
     # Getting the Greek text
 
-    greek_text = soup.find_all('div', attrs={'id': 'edition'})[0]
+    greek_text = DDbDP_soup.find_all('div', attrs={'id': 'edition'})[0]
 
 
     # Function to keep the line breaks found in the original HTML
@@ -164,26 +186,10 @@ while run:
 
     final_text = text_with_newlines(greek_text)
 
-    # Saving it as .txt file
+    print(final_text)
 
-    content = title + '\n' + tm_id + '\n' + pcairz_id + '\n' + date + '\n' + summary + '\n' + final_text
-
-    title_txt = Document_id + '.txt'
-    with open(title_txt, 'w', encoding="utf-8") as textfile:  # creates the file
-        textfile.write(content)  # writes the content to the file
-
-    # #Importing New Athena Unicode
-    pdfmetrics.registerFont(TTFont('New Athena Unicode', "newathu5_7.ttf"))
-
-    # Building the URL for the attestation list page
-
-    # TMid = input("TM id:")
-
-    core_URL = "https://www.trismegistos.org/ref"
-    attestation_URL = core_URL + "/ref_list.php?tex_id=" + TMid
-
-    # Gets the html code for the given url. All the unicode characters are shown by their code at this stage
-
+    TMrefURL = "https://www.trismegistos.org/ref"
+    attestation_URL = TMrefURL + "/ref_list.php?tex_id=" + TMid
     attestation_HTML = urlopen(attestation_URL).read()
 
     # parses the html. Here you can actually see the Greek characters already
@@ -201,7 +207,6 @@ while run:
     attestations_str = ''.join(map(str, attestations_all))
     lines_str = ''.join(map(str, lines_all))
     attestationsid_str = ''.join(map(str, attestationsid_all))
-
 
     pattern_name = re.compile(r'(record=\d+">)(\w+|\.+)')
     pattern_id = re.compile(r"(pnr:\s)(\d+)")
@@ -244,7 +249,7 @@ while run:
     # builds url that leads to single attestation entry, which provides the action
     action_URLs = []
     for i in range(len(attestation_ids)):
-        action_URL = core_URL + "/detail.php?ref_id=" + attestation_ids[i]
+        action_URL = TMrefURL + "/detail.php?ref_id=" + attestation_ids[i]
         action_URLs.append(action_URL)
 
     actions_list = []
@@ -260,7 +265,23 @@ while run:
     if len(names_list) == len(ids_list) == len(attestation_ids) == len(lines_list) == len(actions_list):
         print(colored("lenght ok", "green"))
 
-    # Saving it in a document
+
+    # Saving temporary .txt files:
+
+    # Saving DDbDP data as .txt file
+
+    content = 'Title: '+ title + '\n' +'TMid: ' + TMid + '\n' +'Main publication: '+ publication + '\n' + 'Date: ' + date + '\n' \
+              + 'Summary: '+ summary + '\n' + 'Text: '+'\n' + final_text
+
+    title_txt = TMid + '.txt'
+    with open(title_txt, 'w', encoding="utf-8") as textfile:  # creates the file
+        textfile.write(content)  # writes the content to the file
+
+    # #Importing New Athena Unicode
+    pdfmetrics.registerFont(TTFont('New Athena Unicode', "newathu5_7.ttf"))
+
+    # Saving TM attestation data as .txt file
+
     title_txt = TMid + '_attestations.txt'
     with open(title_txt, 'w', encoding="utf-8") as textfile:  # creates the file
         for i in range(len(names_list)):
@@ -277,8 +298,8 @@ while run:
     def addTitle(doc):
         doc.append(Spacer(1, 20))
         doc.append(Paragraph(TMid, ParagraphStyle(name="Name", fontName='New Athena Unicode',
-                                                         fontsize=18,
-                                                         alignment=TA_JUSTIFY)))
+                                                  fontsize=18,
+                                                  alignment=TA_JUSTIFY)))
         doc.append(Spacer(1, 50))
         return doc
 
@@ -292,7 +313,7 @@ while run:
             for line in txt.read().split('\n'):
                 doc.append(Paragraph(line, currentStyle))
                 doc.append(Spacer(1, 12))
-        with open(Document_id + ".txt", 'r', encoding="utf-8", errors="surrogateescape") as txt:
+        with open(TMid + ".txt", 'r', encoding="utf-8", errors="surrogateescape") as txt:
             for line in txt.read().split('\n'):
                 doc.append(Paragraph(line, currentStyle))
                 doc.append(Spacer(1, 12))
@@ -301,17 +322,17 @@ while run:
 
     document = addTitle(document)
 
-    SimpleDocTemplate(TMid +'(' + Document_id + ')'+ '.pdf', pagesize=letter,
+    SimpleDocTemplate(TMid + '(' + publication + ')' + '.pdf', pagesize=letter,
                       rightMargin=12, leftMargin=12,
                       topMargin=12, bottomMargin=6).build(addParagraphs(document))
 
-    os.remove(Document_id + ".txt")
+    os.remove(TMid + ".txt")
     os.remove(title_txt)
 
     print("papyri to pdf: ok")
 
     print("both codes: ok")
 
-    again=str(input("Run again? Type y or n: "))
+    again = str(input("Run again? Type y or n: "))
     if again == "n":
         run = False
