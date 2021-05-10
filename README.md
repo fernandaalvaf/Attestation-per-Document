@@ -5,7 +5,7 @@ It scrapes information from both databases and saves it to a .pdf file. In the r
 - A list of people attested in the document with Name, TM per id, Attestation id, attestation line, action.
 - Title (from papyri.info)
 - TM id
-- P. Cairo Zen. identification
+- Identification of the main publication
 - Date
 - Summary
 - Text in Greek
@@ -36,9 +36,6 @@ It will save the .pdf file and ask if you wish to run the code again (type 'y') 
 
 As this code uses Trismegistos' database, you have to make appropriate reference to them in any publications making use of results generated through Trismegistos via this program. You can do so as specified on www.trismegistos.org/about_how_to_cite.
 
-# Project Status
-
-The code currently supports only entries belonging to the P. Cairo Zen. series. This will be updated in the future to include other texts.
 
 # License
 
