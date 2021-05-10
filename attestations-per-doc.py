@@ -204,8 +204,7 @@ while run:
 
     final_text = text_with_newlines(greek_text)
 
-    print(final_text)
-
+    
     TMrefURL = "https://www.trismegistos.org/ref"
     attestation_URL = TMrefURL + "/ref_list.php?tex_id=" + TMid
     attestation_HTML = urlopen(attestation_URL).read()
