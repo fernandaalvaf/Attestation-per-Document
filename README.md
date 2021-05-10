@@ -10,6 +10,10 @@ It scrapes information from both databases and saves it to a .pdf file. In the r
 - Summary
 - Text in Greek
 
+# ONLY ATTESTATIONS 
+
+This is a separate script that contains only the part of the code of the main program which is dedicated to get the attestations list per document. It works in the same way described in this file (See section "How to use:"), but the resulting .pdf file only contains a raw list of attestations.
+
 # Setup
 
 You should have the .py and the "newathu5_7.ttf" in the same folder before running the code. The newathu5_7 is the font used in the .pdf file which is generated.
